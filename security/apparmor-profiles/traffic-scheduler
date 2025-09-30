@@ -1,0 +1,111 @@
+# AppArmor Profile para Scheduler EDF
+# Ubicación: /etc/apparmor.d/traffic-scheduler
+# Versión: 2.0 - Optimizada para microservicio de planificación EDF
+
+#include <tunables/global>
+
+profile traffic-scheduler /usr/bin/node {
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+  #include <abstractions/openssl>
+  
+  # Capacidades específicas para scheduler
+  capability net_bind_service,
+  capability setuid,
+  capability setgid,
+  
+  # Acceso a Node.js y runtime
+  /usr/bin/node ix,
+  /usr/lib/nodejs/** r,
+  /usr/share/nodejs/** r,
+  /usr/local/lib/node_modules/** r,
+  
+  # Directorio de la aplicación
+  /app/** rw,
+  /app/node_modules/** r,
+  /app/src/** r,
+  /app/dist/** r,
+  /app/build/** r,
+  
+  # Archivos de configuración específicos del scheduler
+  /app/.env r,
+  /app/package.json r,
+  /app/tsconfig.json r,
+  /app/scheduler.config.js r,
+  /app/edf-algorithm.js r,
+  /app/priority-calculator.js r,
+  
+  # Logs específicos del scheduler
+  /tmp/traffic-scheduler-*.log w,
+  /var/log/traffic-control/scheduler/** w,
+  /dev/stdout w,
+  /dev/stderr w,
+  
+  # Red - solo puertos necesarios para scheduler
+  network inet stream,
+  network inet6 stream,
+  network tcp port 3003, # Puerto propio del scheduler
+  
+  # Comunicación con otros servicios
+  network tcp port 3002, # Para recibir análisis del analyzer
+  network tcp port 3004, # Para enviar tareas al controller
+  
+  # Archivos de planificación y cola de tareas
+  /tmp/edf-queue-*.json rw,
+  /tmp/priority-cache-*.json rw,
+  /tmp/deadline-calculations-*.json rw,
+  /tmp/schedule-results-*.json rw,
+  
+  # Cache de algoritmos EDF
+  /var/data/edf-cache/** rw,
+  /var/data/priority-models/** rw,
+  /var/data/deadline-history/** rw,
+  
+  # Denegaciones explícitas para seguridad
+  deny /etc/passwd r,
+  deny /etc/shadow r,
+  deny /root/** rwlkmx,
+  deny /home/** rwlkmx,
+  deny /usr/bin/sudo x,
+  deny /bin/su x,
+  deny /usr/bin/ssh x,
+  deny capability sys_admin,
+  deny capability sys_ptrace,
+  deny /proc/sys/** r,
+  deny /sys/** r,
+  
+  # Archivos del sistema necesarios
+  /etc/ssl/certs/** r,
+  /etc/ca-certificates/** r,
+  /usr/share/ca-certificates/** r,
+  
+  # Librerías del sistema
+  /lib/** mr,
+  /lib64/** mr,
+  /usr/lib/** mr,
+  
+  # Procfs limitado para métricas de rendimiento
+  @{PROC}/sys/kernel/version r,
+  @{PROC}/meminfo r,
+  @{PROC}/stat r,
+  @{PROC}/uptime r,
+  @{PROC}/loadavg r,
+  @{PROC}/self/stat r,
+  @{PROC}/self/status r,
+  
+  # Archivos de PID específicos
+  /var/run/traffic-scheduler.pid rw,
+  
+  # Permisos para algoritmo EDF
+  /tmp/edf-decisions-*.json rw,
+  /tmp/scheduling-metrics-*.json rw,
+  /tmp/deadline-violations-*.json rw,
+  
+  # Configuración de algoritmos EDF
+  /etc/traffic-control/edf-config/** r,
+  /etc/traffic-control/deadline-policies/** r,
+  
+  # Acceso a reloj del sistema para deadlines
+  /dev/rtc r,
+}
+

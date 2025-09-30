@@ -1,0 +1,81 @@
+# AppArmor Profile para Sistema de Control de Tráfico
+# Ubicación: /etc/apparmor.d/traffic-control-system
+# Versión: 1.0 - Optimizada para entorno universitario
+
+#include <tunables/global>
+
+profile traffic-control-system /usr/bin/node {
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+  #include <abstractions/openssl>
+  
+  # Capacidades necesarias
+  capability net_bind_service,
+  capability setuid,
+  capability setgid,
+  
+  # Acceso a Node.js
+  /usr/bin/node ix,
+  /usr/lib/nodejs/** r,
+  /usr/share/nodejs/** r,
+  
+  # Directorio de la aplicación
+  /app/** rw,
+  /app/node_modules/** r,
+  /app/src/** r,
+  /app/dist/** r,
+  /app/build/** r,
+  
+  # Archivos de configuración
+  /app/.env r,
+  /app/package.json r,
+  /app/tsconfig.json r,
+  
+  # Logs y temporales
+  /tmp/** rw,
+  /var/log/traffic-control/** w,
+  /dev/stdout w,
+  /dev/stderr w,
+  
+  # Red - solo puertos específicos
+  network inet stream,
+  network inet6 stream,
+  
+  # Puertos permitidos para servicios
+  network tcp port 3001, # Ingestor
+  network tcp port 3002, # Analyzer
+  network tcp port 3003, # Scheduler
+  network tcp port 3004, # Controller
+  network tcp port 3000, # UI
+  
+  # Denegaciones explícitas
+  deny /etc/passwd r,
+  deny /etc/shadow r,
+  deny /root/** rwlkmx,
+  deny /home/** rwlkmx,
+  deny /usr/bin/sudo x,
+  deny /bin/su x,
+  deny /usr/bin/ssh x,
+  deny capability sys_admin,
+  deny capability sys_ptrace,
+  
+  # Archivos del sistema que pueden ser necesarios
+  /etc/ssl/certs/** r,
+  /etc/ca-certificates/** r,
+  /usr/share/ca-certificates/** r,
+  
+  # Librerías del sistema
+  /lib/** mr,
+  /lib64/** mr,
+  /usr/lib/** mr,
+  
+  # Procfs y sysfs limitado
+  @{PROC}/sys/kernel/version r,
+  @{PROC}/meminfo r,
+  @{PROC}/stat r,
+  @{PROC}/uptime r,
+  @{PROC}/loadavg r,
+  
+  # Archivos de PID
+  /var/run/traffic-control/*.pid rw,
+}

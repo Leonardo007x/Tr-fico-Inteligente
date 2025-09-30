@@ -1,0 +1,115 @@
+# AppArmor Profile para Controller de Semáforos
+# Ubicación: /etc/apparmor.d/traffic-controller
+# Versión: 2.0 - Optimizada para microservicio de control
+
+#include <tunables/global>
+
+profile traffic-controller /usr/bin/node {
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+  #include <abstractions/openssl>
+  
+  # Capacidades específicas para controller
+  capability net_bind_service,
+  capability setuid,
+  capability setgid,
+  
+  # Acceso a Node.js y runtime
+  /usr/bin/node ix,
+  /usr/lib/nodejs/** r,
+  /usr/share/nodejs/** r,
+  /usr/local/lib/node_modules/** r,
+  
+  # Directorio de la aplicación
+  /app/** rw,
+  /app/node_modules/** r,
+  /app/src/** r,
+  /app/dist/** r,
+  /app/build/** r,
+  
+  # Archivos de configuración específicos del controller
+  /app/.env r,
+  /app/package.json r,
+  /app/tsconfig.json r,
+  /app/controller.config.js r,
+  /app/traffic-light-states.js r,
+  /app/emergency-handler.js r,
+  
+  # Logs específicos del controller
+  /tmp/traffic-controller-*.log w,
+  /var/log/traffic-control/controller/** w,
+  /dev/stdout w,
+  /dev/stderr w,
+  
+  # Red - solo puertos necesarios para controller
+  network inet stream,
+  network inet6 stream,
+  network tcp port 3004, # Puerto propio del controller
+  network tcp port 3000, # Para comunicación con UI
+  
+  # Comunicación con otros servicios
+  network tcp port 3003, # Para recibir tareas del scheduler
+  network tcp port 3001, # Para consultar datos del ingestor
+  network tcp port 3002, # Para consultar análisis del analyzer
+  
+  # Archivos de estado y control
+  /tmp/traffic-light-states-*.json rw,
+  /tmp/control-decisions-*.json rw,
+  /tmp/emergency-events-*.json rw,
+  /tmp/state-transitions-*.json rw,
+  
+  # Estado persistente de semáforos
+  /var/data/traffic-lights/** rw,
+  /var/data/control-history/** rw,
+  /var/data/emergency-logs/** rw,
+  
+  # Denegaciones explícitas para seguridad
+  deny /etc/passwd r,
+  deny /etc/shadow r,
+  deny /root/** rwlkmx,
+  deny /home/** rwlkmx,
+  deny /usr/bin/sudo x,
+  deny /bin/su x,
+  deny /usr/bin/ssh x,
+  deny capability sys_admin,
+  deny capability sys_ptrace,
+  deny /proc/sys/** r,
+  deny /sys/** r,
+  
+  # Archivos del sistema necesarios
+  /etc/ssl/certs/** r,
+  /etc/ca-certificates/** r,
+  /usr/share/ca-certificates/** r,
+  
+  # Librerías del sistema
+  /lib/** mr,
+  /lib64/** mr,
+  /usr/lib/** mr,
+  
+  # Procfs limitado para métricas de rendimiento
+  @{PROC}/sys/kernel/version r,
+  @{PROC}/meminfo r,
+  @{PROC}/stat r,
+  @{PROC}/uptime r,
+  @{PROC}/loadavg r,
+  @{PROC}/self/stat r,
+  @{PROC}/self/status r,
+  
+  # Archivos de PID específicos
+  /var/run/traffic-controller.pid rw,
+  
+  # Permisos para control de semáforos
+  /tmp/light-control-*.json rw,
+  /tmp/state-updates-*.json rw,
+  /tmp/performance-metrics-*.json rw,
+  
+  # Configuración de semáforos
+  /etc/traffic-control/intersections/** r,
+  /etc/traffic-control/light-config/** r,
+  /etc/traffic-control/emergency-procedures/** r,
+  
+  # Acceso a dispositivos de hardware (simulado)
+  /dev/traffic-lights rw,
+  /dev/emergency-switch r,
+}
+

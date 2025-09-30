@@ -1,0 +1,322 @@
+# Docker Compose Profesional - Sistema Control Tráfico Popayán
+# Versión optimizada con mejores prácticas para entorno universitario
+version: '3.8'
+
+x-common-variables: &common-variables
+  NODE_ENV: ${NODE_ENV:-production}
+  JWT_SECRET: ${JWT_SECRET:-your_super_secure_jwt_secret_here_2024}
+  TZ: America/Bogota
+
+x-restart-policy: &restart-policy
+  restart: unless-stopped
+
+x-logging: &logging
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  # =====================================
+  # SERVICIO INGESTOR DE DATOS
+  # =====================================
+  ingestor:
+    build: 
+      context: ./ingestor
+      dockerfile: Dockerfile
+    container_name: traffic-ingestor-popayan
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    ports:
+      - "3001:3001"
+    environment:
+      <<: *common-variables
+      SERVICE_NAME: ingestor
+      SERVICE_VERSION: 1.0.0
+    networks:
+      - traffic-internal
+      - traffic-external
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    labels:
+      - "traefik.enable=true"
+      - "project=traffic-control-popayan"
+      - "component=data-ingestor"
+    # Configuración de seguridad AppArmor
+    security_opt:
+      - apparmor:traffic-ingestor
+    # Volúmenes para logs y datos persistentes
+    volumes:
+      - traffic-logs:/var/log/traffic-control
+      - traffic-data:/var/data
+
+  # =====================================
+  # SERVICIO ANALIZADOR DE TRÁFICO
+  # =====================================
+  analyzer:
+    build: 
+      context: ./analyzer
+      dockerfile: Dockerfile
+    container_name: traffic-analyzer-popayan
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    ports:
+      - "3002:3002"
+    environment:
+      <<: *common-variables
+      SERVICE_NAME: analyzer
+      SERVICE_VERSION: 1.0.0
+      INGESTOR_URL: http://ingestor:3001
+    depends_on:
+      ingestor:
+        condition: service_healthy
+    networks:
+      - traffic-internal
+      - traffic-external
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 768M
+        reservations:
+          cpus: '0.5'
+          memory: 384M
+    labels:
+      - "project=traffic-control-popayan"
+      - "component=traffic-analyzer"
+    # Configuración de seguridad AppArmor
+    security_opt:
+      - apparmor:traffic-analyzer
+    # Volúmenes para logs y datos persistentes
+    volumes:
+      - traffic-logs:/var/log/traffic-control
+      - traffic-data:/var/data
+
+  # =====================================
+  # SERVICIO SCHEDULER EDF
+  # =====================================
+  scheduler:
+    build: 
+      context: ./scheduler
+      dockerfile: Dockerfile
+    container_name: traffic-scheduler-edf
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    ports:
+      - "3003:3003"
+    environment:
+      <<: *common-variables
+      SERVICE_NAME: scheduler
+      SERVICE_VERSION: 1.0.0
+      ANALYZER_URL: http://analyzer:3002
+      ALGORITHM: EDF
+    depends_on:
+      analyzer:
+        condition: service_healthy
+    networks:
+      - traffic-internal
+      - traffic-external
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    labels:
+      - "project=traffic-control-popayan"
+      - "component=edf-scheduler"
+      - "algorithm=earliest-deadline-first"
+    # Configuración de seguridad AppArmor
+    security_opt:
+      - apparmor:traffic-scheduler
+    # Volúmenes para logs y datos persistentes
+    volumes:
+      - traffic-logs:/var/log/traffic-control
+      - traffic-data:/var/data
+
+  # =====================================
+  # SERVICIO CONTROLADOR DE SEMÁFOROS
+  # =====================================
+  controller:
+    build: 
+      context: ./controller
+      dockerfile: Dockerfile
+    container_name: traffic-controller-popayan
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    ports:
+      - "3004:3004"
+    environment:
+      <<: *common-variables
+      SERVICE_NAME: controller
+      SERVICE_VERSION: 1.0.0
+      SCHEDULER_URL: http://scheduler:3003
+    depends_on:
+      scheduler:
+        condition: service_healthy
+    networks:
+      - traffic-internal
+      - traffic-external
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3004/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 768M
+        reservations:
+          cpus: '0.5'
+          memory: 384M
+    labels:
+      - "project=traffic-control-popayan"
+      - "component=traffic-controller"
+      - "realtime=true"
+    # Configuración de seguridad AppArmor
+    security_opt:
+      - apparmor:traffic-controller
+    # Volúmenes para logs y datos persistentes
+    volumes:
+      - traffic-logs:/var/log/traffic-control
+      - traffic-data:/var/data
+
+  # =====================================
+  # INTERFAZ WEB DE USUARIO
+  # =====================================
+  ui:
+    build: 
+      context: ./ui
+      dockerfile: Dockerfile
+    container_name: traffic-ui-popayan
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    ports:
+      - "3000:3000"
+    environment:
+      CONTROLLER_URL: http://localhost:3004
+      MAPBOX_ACCESS_TOKEN: ${MAPBOX_ACCESS_TOKEN:-}
+      CITY: Popayan
+      COUNTRY: Colombia
+    depends_on:
+      controller:
+        condition: service_healthy
+    networks:
+      - traffic-external
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    labels:
+      - "project=traffic-control-popayan"
+      - "component=web-interface"
+      - "public=true"
+    # Configuración de seguridad AppArmor
+    security_opt:
+      - apparmor:traffic-ui
+    # Volúmenes para logs y datos persistentes
+    volumes:
+      - traffic-logs:/var/log/traffic-control
+      - traffic-data:/var/data
+
+# =====================================
+# CONFIGURACIÓN DE REDES
+# =====================================
+networks:
+  # Red interna para comunicación entre microservicios
+  traffic-internal:
+    driver: bridge
+    internal: false  # Cambiar a true para máxima seguridad
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+    labels:
+      - "project=traffic-control-popayan"
+      - "network-type=internal"
+  
+  # Red externa para acceso público
+  traffic-external:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+          gateway: 172.21.0.1
+    labels:
+      - "project=traffic-control-popayan"
+      - "network-type=external"
+
+# =====================================
+# VOLÚMENES PARA PERSISTENCIA
+# =====================================
+volumes:
+  traffic-logs:
+    driver: local
+    labels:
+      - "project=traffic-control-popayan"
+      - "data-type=logs"
+  
+  traffic-data:
+    driver: local
+    labels:
+      - "project=traffic-control-popayan"
+      - "data-type=analytics"

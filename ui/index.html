@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Control de Tráfico Inteligente - Popayán</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="logo">🚦</div>
+                    <div class="title-section">
+                        <h1>Control de Tráfico Inteligente</h1>
+                        <p>Popayán - Sistema EDF</p>
+                    </div>
+                </div>
+                <div class="status-indicators">
+                    <div class="status-item" id="connection-status">
+                        <div class="status-dot offline"></div>
+                        <span>Desconectado</span>
+                    </div>
+                    <div class="status-item" id="system-status">
+                        <div class="status-dot"></div>
+                        <span>Sistema</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Map Container -->
+            <div class="map-container">
+                <div id="map"></div>
+                <div class="map-controls">
+                    <button id="center-map" class="control-btn">📍 Centrar Mapa</button>
+                    <button id="toggle-labels" class="control-btn">🏷️ Etiquetas</button>
+                    <button id="simulate-peak" class="control-btn">⚡ Simular Hora Pico</button>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <!-- Metrics Panel -->
+                <div class="panel metrics-panel">
+                    <h3>📊 Métricas del Sistema</h3>
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <div class="metric-value" id="total-lights">-</div>
+                            <div class="metric-label">Semáforos Totales</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value" id="operational-lights">-</div>
+                            <div class="metric-label">Operacionales</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value" id="state-changes">-</div>
+                            <div class="metric-label">Cambios de Estado</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value" id="success-rate">-</div>
+                            <div class="metric-label">Tasa de Éxito</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Traffic Flow Panel -->
+                <div class="panel traffic-panel">
+                    <h3><i class="fas fa-car"></i> Flujo Vehicular</h3>
+                    <div class="traffic-summary">
+                        <div class="congestion-levels">
+                            <div class="congestion-item critical">
+                                <div class="congestion-count" id="critical-count">0</div>
+                                <div class="congestion-label">Crítico</div>
+                            </div>
+                            <div class="congestion-item high">
+                                <div class="congestion-count" id="high-count">0</div>
+                                <div class="congestion-label">Alto</div>
+                            </div>
+                            <div class="congestion-item medium">
+                                <div class="congestion-count" id="medium-count">0</div>
+                                <div class="congestion-label">Medio</div>
+                            </div>
+                            <div class="congestion-item low">
+                                <div class="congestion-count" id="low-count">0</div>
+                                <div class="congestion-label">Bajo</div>
+                            </div>
+                        </div>
+                        <div class="peak-hour-indicator" id="peak-hour">
+                            <span class="peak-status">Hora Normal</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Real-time Charts Panel -->
+                <div class="panel charts-panel">
+                    <h3><i class="fas fa-chart-line"></i> Gráficos en Tiempo Real</h3>
+                    <div class="charts-container">
+                        <div class="chart-wrapper">
+                            <h4>Flujo por Intersección</h4>
+                            <canvas id="flowChart"></canvas>
+                        </div>
+                        <div class="chart-wrapper">
+                            <h4>Tiempos de Espera</h4>
+                            <canvas id="waitTimeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Priority Queue Panel -->
+                <div class="panel priority-panel">
+                    <h3>⏰ Cola de Prioridades EDF</h3>
+                    <div class="priority-list" id="priority-list">
+                        <div class="no-data">Cargando prioridades...</div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity Panel -->
+                <div class="panel activity-panel">
+                    <h3>📝 Actividad Reciente</h3>
+                    <div class="activity-list" id="activity-list">
+                        <div class="no-data">Sin actividad reciente</div>
+                    </div>
+                </div>
+
+                <!-- System Info Panel -->
+                <div class="panel info-panel">
+                    <h3>ℹ️ Información del Sistema</h3>
+                    <div class="info-items">
+                        <div class="info-item">
+                            <span class="info-label">Tiempo Activo:</span>
+                            <span class="info-value" id="system-uptime">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Clientes Conectados:</span>
+                            <span class="info-value" id="connected-clients">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Última Actualización:</span>
+                            <span class="info-value" id="last-update">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Algoritmo:</span>
+                            <span class="info-value">EDF (Earliest Deadline First)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal for Traffic Light Details -->
+        <div id="light-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modal-title">Detalles del Semáforo</h3>
+                    <button class="close-btn" id="close-modal">&times;</button>
+                </div>
+                <div class="modal-body" id="modal-body">
+                    <!-- Content will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay">
+            <div class="loading-spinner"></div>
+            <p>Conectando al sistema...</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

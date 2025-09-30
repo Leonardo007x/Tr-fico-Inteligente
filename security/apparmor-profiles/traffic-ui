@@ -1,0 +1,119 @@
+# AppArmor Profile para UI Web
+# Ubicación: /etc/apparmor.d/traffic-ui
+# Versión: 2.0 - Optimizada para microservicio de interfaz web
+
+#include <tunables/global>
+
+profile traffic-ui /usr/bin/node {
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+  #include <abstractions/openssl>
+  
+  # Capacidades específicas para UI
+  capability net_bind_service,
+  capability setuid,
+  capability setgid,
+  
+  # Acceso a Node.js y runtime
+  /usr/bin/node ix,
+  /usr/lib/nodejs/** r,
+  /usr/share/nodejs/** r,
+  /usr/local/lib/node_modules/** r,
+  
+  # Directorio de la aplicación
+  /app/** rw,
+  /app/node_modules/** r,
+  /app/src/** r,
+  /app/dist/** r,
+  /app/build/** r,
+  /app/public/** r,
+  /app/static/** r,
+  
+  # Archivos de configuración específicos de UI
+  /app/.env r,
+  /app/package.json r,
+  /app/tsconfig.json r,
+  /app/ui.config.js r,
+  /app/leaflet.config.js r,
+  /app/socket.config.js r,
+  
+  # Logs específicos de UI
+  /tmp/traffic-ui-*.log w,
+  /var/log/traffic-control/ui/** w,
+  /dev/stdout w,
+  /dev/stderr w,
+  
+  # Red - solo puertos necesarios para UI
+  network inet stream,
+  network inet6 stream,
+  network tcp port 3000, # Puerto propio de UI
+  
+  # Comunicación con servicios backend
+  network tcp port 3001, # Para datos del ingestor
+  network tcp port 3002, # Para análisis del analyzer
+  network tcp port 3003, # Para planificación del scheduler
+  network tcp port 3004, # Para control del controller
+  
+  # Archivos de interfaz y assets
+  /tmp/ui-cache-*.json rw,
+  /tmp/map-tiles-*.json rw,
+  /tmp/socket-sessions-*.json rw,
+  /tmp/user-sessions-*.json rw,
+  
+  # Assets estáticos y cache
+  /var/data/ui-cache/** rw,
+  /var/data/map-data/** rw,
+  /var/data/user-preferences/** rw,
+  
+  # Denegaciones explícitas para seguridad
+  deny /etc/passwd r,
+  deny /etc/shadow r,
+  deny /root/** rwlkmx,
+  deny /home/** rwlkmx,
+  deny /usr/bin/sudo x,
+  deny /bin/su x,
+  deny /usr/bin/ssh x,
+  deny capability sys_admin,
+  deny capability sys_ptrace,
+  deny /proc/sys/** r,
+  deny /sys/** r,
+  
+  # Archivos del sistema necesarios
+  /etc/ssl/certs/** r,
+  /etc/ca-certificates/** r,
+  /usr/share/ca-certificates/** r,
+  
+  # Librerías del sistema
+  /lib/** mr,
+  /lib64/** mr,
+  /usr/lib/** mr,
+  
+  # Procfs limitado para métricas de rendimiento
+  @{PROC}/sys/kernel/version r,
+  @{PROC}/meminfo r,
+  @{PROC}/stat r,
+  @{PROC}/uptime r,
+  @{PROC}/loadavg r,
+  @{PROC}/self/stat r,
+  
+  # Archivos de PID específicos
+  /var/run/traffic-ui.pid rw,
+  
+  # Permisos para interfaz web
+  /tmp/web-assets-*.json rw,
+  /tmp/socket-connections-*.json rw,
+  /tmp/ui-metrics-*.json rw,
+  
+  # Configuración de UI
+  /etc/traffic-control/ui-config/** r,
+  /etc/traffic-control/map-config/** r,
+  
+  # Acceso a archivos de mapas
+  /var/data/maps/popayan/** r,
+  /var/data/maps/intersections/** r,
+  
+  # Archivos de sesión de usuario
+  /tmp/user-session-*.json rw,
+  /var/data/sessions/** rw,
+}
+

@@ -1,0 +1,105 @@
+# AppArmor Profile para Analyzer de Tráfico
+# Ubicación: /etc/apparmor.d/traffic-analyzer
+# Versión: 2.0 - Optimizada para microservicio de análisis
+
+#include <tunables/global>
+
+profile traffic-analyzer /usr/bin/node {
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+  #include <abstractions/openssl>
+  
+  # Capacidades específicas para analyzer
+  capability net_bind_service,
+  capability setuid,
+  capability setgid,
+  
+  # Acceso a Node.js y runtime
+  /usr/bin/node ix,
+  /usr/lib/nodejs/** r,
+  /usr/share/nodejs/** r,
+  /usr/local/lib/node_modules/** r,
+  
+  # Directorio de la aplicación
+  /app/** rw,
+  /app/node_modules/** r,
+  /app/src/** r,
+  /app/dist/** r,
+  /app/build/** r,
+  
+  # Archivos de configuración específicos del analyzer
+  /app/.env r,
+  /app/package.json r,
+  /app/tsconfig.json r,
+  /app/analyzer.config.js r,
+  /app/density-algorithms.js r,
+  
+  # Logs específicos del analyzer
+  /tmp/traffic-analyzer-*.log w,
+  /var/log/traffic-control/analyzer/** w,
+  /dev/stdout w,
+  /dev/stderr w,
+  
+  # Red - solo puertos necesarios para analyzer
+  network inet stream,
+  network inet6 stream,
+  network tcp port 3002, # Puerto propio del analyzer
+  
+  # Comunicación con otros servicios
+  network tcp port 3001, # Para recibir datos del ingestor
+  network tcp port 3003, # Para enviar análisis al scheduler
+  network tcp port 3004, # Para enviar métricas al controller
+  
+  # Archivos de análisis y cache
+  /tmp/analysis-cache-*.json rw,
+  /tmp/density-metrics-*.json rw,
+  /tmp/congestion-data-*.json rw,
+  /tmp/trend-analysis-*.json rw,
+  
+  # Datos históricos para análisis
+  /var/data/traffic-history/** rw,
+  /var/data/density-models/** rw,
+  
+  # Denegaciones explícitas para seguridad
+  deny /etc/passwd r,
+  deny /etc/shadow r,
+  deny /root/** rwlkmx,
+  deny /home/** rwlkmx,
+  deny /usr/bin/sudo x,
+  deny /bin/su x,
+  deny /usr/bin/ssh x,
+  deny capability sys_admin,
+  deny capability sys_ptrace,
+  deny /proc/sys/** r,
+  deny /sys/** r,
+  
+  # Archivos del sistema necesarios
+  /etc/ssl/certs/** r,
+  /etc/ca-certificates/** r,
+  /usr/share/ca-certificates/** r,
+  
+  # Librerías del sistema
+  /lib/** mr,
+  /lib64/** mr,
+  /usr/lib/** mr,
+  
+  # Procfs limitado para métricas de rendimiento
+  @{PROC}/sys/kernel/version r,
+  @{PROC}/meminfo r,
+  @{PROC}/stat r,
+  @{PROC}/uptime r,
+  @{PROC}/loadavg r,
+  @{PROC}/self/stat r,
+  @{PROC}/self/status r,
+  
+  # Archivos de PID específicos
+  /var/run/traffic-analyzer.pid rw,
+  
+  # Permisos para algoritmos de análisis
+  /tmp/algorithm-results-*.json rw,
+  /tmp/performance-metrics-*.json rw,
+  
+  # Configuración de algoritmos
+  /etc/traffic-control/algorithms/** r,
+}
+
