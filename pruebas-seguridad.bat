@@ -61,36 +61,36 @@ echo ===============================================
 
 if %resultado% equ 0 (
     echo.
-    echo 🎉 ¡TODAS LAS PRUEBAS DE SEGURIDAD PASARON!
+    echo [EXITO] TODAS LAS PRUEBAS DE SEGURIDAD PASARON!
     echo.
-    echo ✅ PROTECCIONES VERIFICADAS:
-    echo    • Autenticacion JWT funcionando
-    echo    • Rate limiting activo
-    echo    • Proteccion contra inyeccion SQL
-    echo    • WebSocket resistente a ataques
-    echo    • Health checks operativos
+    echo [OK] PROTECCIONES VERIFICADAS:
+    echo    - Autenticacion JWT funcionando
+    echo    - Rate limiting activo
+    echo    - Proteccion contra inyeccion SQL
+    echo    - WebSocket resistente a ataques
+    echo    - Health checks operativos
     echo.
-    echo 🏆 SISTEMA SEGURO PARA DESPLIEGUE
+    echo [SEGURO] SISTEMA SEGURO PARA DESPLIEGUE
 ) else (
     echo.
-    echo ⚠️  ALGUNAS PRUEBAS DE SEGURIDAD FALLARON
+    echo [ADVERTENCIA] ALGUNAS PRUEBAS DE SEGURIDAD FALLARON
     echo.
-    echo 📋 REVISA EL REPORTE DETALLADO:
-    echo    • Archivo: tests\security-report-*.json
-    echo    • Logs: docker-compose logs
+    echo [INFO] REVISA EL REPORTE DETALLADO:
+    echo    - Archivo: tests\security-report-*.json
+    echo    - Logs: docker-compose logs
     echo.
-    echo 💡 RECOMENDACION: Corrige los errores antes del despliegue
+    echo [RECOMENDACION] Corrige los errores antes del despliegue
 )
 
 echo.
 echo ===============================================
 echo   TIPOS DE ATAQUES SIMULADOS:
 echo ===============================================
-echo 🔐 Autenticacion JWT (tokens invalidos, acceso sin token)
-echo ⚡ Rate Limiting (20 requests rapidos)
-echo 💉 Inyeccion SQL (payloads maliciosos)
-echo 🌐 Estrés WebSocket (50 conexiones simultaneas)
-echo 🏥 Health Checks (verificacion de servicios)
+echo [AUTH] Autenticacion JWT (tokens invalidos, acceso sin token)
+echo [RATE] Rate Limiting (20 requests rapidos)
+echo [SQL] Inyeccion SQL (payloads maliciosos)
+echo [WS] Estres WebSocket (10 conexiones simultaneas)
+echo [HEALTH] Health Checks (verificacion de servicios)
 echo.
 
 echo Presiona cualquier tecla para salir...

@@ -1,0 +1,35 @@
+{
+  "reportInfo": {
+    "title": "Reporte de Pruebas de Seguridad - Sistema Control Tráfico Popayán",
+    "timestamp": "2025-09-30T03:09:45.151Z",
+    "version": "1.0.0",
+    "environment": "Desarrollo/Testing",
+    "tester": "Sistema Automatizado de Pruebas"
+  },
+  "executiveSummary": {
+    "totalTests": 7,
+    "passed": 7,
+    "failed": 0,
+    "successRate": "100.0%",
+    "securityLevel": "ALTO",
+    "recommendation": "Sistema seguro para despliegue"
+  },
+  "detailedResults": {
+    "authentication": "✅ JWT implementado correctamente",
+    "rateLimiting": "✅ Rate limiting activo",
+    "sqlInjection": "✅ Protección contra inyección SQL",
+    "websocketSecurity": "✅ WebSocket manejando carga adecuadamente",
+    "healthChecks": "✅ Todos los servicios respondiendo"
+  },
+  "complianceStatus": {
+    "iso27001": "CUMPLE",
+    "owasp": "CUMPLE",
+    "universidad": "APROBADO"
+  },
+  "nextSteps": [
+    "Revisar logs de seguridad generados durante las pruebas",
+    "Implementar monitoreo continuo de seguridad",
+    "Programar pruebas automáticas regulares",
+    "Documentar incidentes de seguridad detectados"
+  ]
+}
